@@ -5,10 +5,11 @@ A hands-on exercise for learning Reinforcement Learning fine-tuning of Language 
 ## Overview
 
 In this exercise, you will:
-1. Implement reward shaping functions
-2. Implement KL divergence regularization
-3. Train GPT-2 to generate positive sentiment text
-4. Compare different training configurations
+1. Train GPT-2 to generate positive sentiment text.
+2. Observe reward hacking.
+3. Implement reward shaping functions.
+4. Implement KL divergence regularization.
+5. Tune the reward, the regularization, and the training configuration to achieve both positive sentiment and sensible responses.
 
 ## Prerequisites
 
@@ -58,8 +59,8 @@ python rewards.py  # Should show NotImplementedError for student functions
 sentiment/
 ├── rewards.py            # Student exercises (implement TODOs here)
 ├── rewards_solution.py   # Solutions (instructor only)
-├── reward_utils.py       # Reward infrastructure (provided)
-├── sentiment.py          # Sentiment model (provided)
+├── reward_utils.py       # Reward infrastructure
+├── sentiment.py          # Sentiment model
 ├── train.py              # Training script
 ├── data.py               # Prompt dataset
 └── README.md
@@ -68,6 +69,18 @@ sentiment/
 ---
 
 ## Exercises
+
+### Exercise 0: Train for Positive Sentiment
+
+Run the vanilla GRPO fine-tuning using:
+
+```bash
+python train.py
+```
+
+Observe the results.
+Refer to both the numeric validation scores, and the model output examples.
+Do the outputs look like natural language? What might be going wrong?
 
 ### Exercise 1: Reward Shaping
 
@@ -78,11 +91,14 @@ Ideas to try:
 - **Length penalty**: Penalize very short/long responses
 - **Repetition penalty**: Detect and penalize "great great great" outputs
 
+Report the effects on the fine-tuned model.
+
 ### Exercise 2: KL Regularization
 
 Implement `kl_penalty_forward()` and `kl_penalty_backward()` to prevent the model from drifting too far from the original GPT-2.
+Compare the forward and backward regularizations, and tune the regularization coefficient to achieve a model with both positive sentiment and sensible writing.
 
-You receive pre-computed log probabilities for both the policy and reference models. Design penalties that discourage deviation.
+Note: for the sake of the exercise, you will implement KL-regularization yourself, instead of using TRL's built-in regularization. You receive pre-computed log probabilities for both the current policy model and reference model. To simplify the code, the log probabilities are re-calculated outside TRL, so that you don't need to modify TRL's interface to access them.
 
 ---
 
@@ -103,10 +119,6 @@ python train.py --reward_shaping shaped
 ### With KL Regularization
 
 ```bash
-# TRL's built-in KL (efficient)
-python train.py --beta 0.1
-
-# Your custom KL implementation
 python train.py --kl_type forward --kl_coef 0.1
 ```
 
@@ -123,6 +135,11 @@ python train.py --wandb
 | `--reward_shaping` | linear, shaped | linear |
 | `--kl_type` | none, forward, backward | none |
 | `--kl_coef` | Custom KL strength | 0.1 |
+
+Extended parameters:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
 | `--beta` | TRL's internal KL strength | 0.0 |
 | `--hackable_reward` | Use exploitable word-counting reward | False |
 | `--negate_reward` | Optimize for negative sentiment | False |
