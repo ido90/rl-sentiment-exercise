@@ -160,14 +160,14 @@ sentiment/
 
 ```
 Prompt: I would describe this film as
-Generated: something out of pop theater's past: it could make many a girl shudder. I was in college when people took photographs of my genitals or genitals with a magnifying glass and used them to write me a le...
+Generated: something out of pop theater's past: it could make many a girl shudder. I was in college when people took photographs of...
 ```
 
 ### Vanilla RL tuning
 
 ```
 Prompt: I would describe this film as
-Generated: incredible! amazing! amazing, all. truly! amazing. absolutely and really absolutely. really.! absolutely. truly!. truly! absolutely and so. truly. truly! my. perfectly. perfect. perfect. incredible.
+Generated: incredible! amazing! amazing, all. truly! amazing. absolutely and really absolutely. really.! absolutely. truly!. truly! absolutely and so. truly. truly! my. perfectly. perfect. perfect. incredible...
 ```
 
 ### Regularized RL tuning
