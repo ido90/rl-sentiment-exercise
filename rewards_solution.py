@@ -221,7 +221,7 @@ def kl_penalty_backward(
 # =============================================================================
 
 def make_reward_function(
-    shaping: str = "none",
+    shaping: str = "linear",
     kl_type: str = "none",
     kl_coef: float = 0.1,
     ref_model=None,
@@ -238,7 +238,7 @@ def make_reward_function(
     3. Optionally negates the final reward (for negative sentiment optimization)
     
     Args:
-        shaping: Type of reward shaping ("none" or "exponential")
+        shaping: Type of reward shaping ("linear" or "exponential")
         kl_type: Type of KL regularization ("none", "forward", "backward")
         kl_coef: Coefficient for KL term
         ref_model: Reference model (required if kl_type != "none")
@@ -261,7 +261,7 @@ def make_reward_function(
         raw_scores = scorer(completions)
         
         # Step 2: Apply shaping
-        if shaping == "none":
+        if shaping == "linear":
             base_rewards = raw_scores
         elif shaping == "exponential":
             # Apply exponential shaping to raw scores

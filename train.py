@@ -223,7 +223,7 @@ def train(
     preset: str = "default",
     max_steps: Optional[int] = None,
     num_generations: Optional[int] = None,
-    reward_shaping: str = "none",
+    reward_shaping: str = "linear",
     kl_type: str = "none",
     kl_coef: float = 0.1,
     hackable_reward: bool = False,
@@ -245,7 +245,7 @@ def train(
         preset: Training preset ("default")
         max_steps: Override preset's max_steps
         num_generations: Override preset's num_generations (GRPO group size)
-        reward_shaping: "none" or "exponential"
+        reward_shaping: "linear" or "exponential"
         kl_type: Custom KL regularization in reward ("none", "forward", "backward")
         kl_coef: Coefficient for custom KL regularization (default: 0.1)
         hackable_reward: Use word-counting reward (demonstrates reward hacking)
@@ -384,7 +384,7 @@ def train(
     
     # Print reward configuration
     scorer_name = "HACKABLE (word counting)" if hackable_reward else "Sentiment model"
-    shaping_desc = {"none": "none", "exponential": "exponential (temp=1.0)"}
+    shaping_desc = {"linear": "linear", "exponential": "exponential (temp=1.0)"}
     kl_desc = {
         "none": "None",
         "forward": f"Forward KL (coef={kl_coef})",
@@ -562,8 +562,8 @@ def main():
     
     # Reward configuration
     parser.add_argument(
-        "--reward_shaping", type=str, default="none",
-        choices=["none", "exponential"],
+        "--reward_shaping", type=str, default="linear",
+        choices=["linear", "exponential"],
         help="Reward shaping method"
     )
     parser.add_argument(
