@@ -37,10 +37,8 @@ except ImportError:
 from data import get_train_dataset, get_validation_dataset, VALIDATION_PROMPTS
 from sentiment import get_sentiment_scores, get_hackable_scores
 # Import from solution file for working training; students use rewards.py
-try:
-    from rewards_solution import make_reward_function
-except ImportError:
-    from rewards import make_reward_function
+from reward_utils import make_reward_function
+import rewards_solution
 
 
 # =============================================================================
@@ -245,7 +243,7 @@ def train(
         preset: Training preset ("default")
         max_steps: Override preset's max_steps
         num_generations: Override preset's num_generations (GRPO group size)
-        reward_shaping: "linear" or "exponential"
+        reward_shaping: "linear" or "shaped" (custom shaping from rewards module)
         kl_type: Custom KL regularization in reward ("none", "forward", "backward")
         kl_coef: Coefficient for custom KL regularization (default: 0.1)
         hackable_reward: Use word-counting reward (demonstrates reward hacking)
@@ -342,10 +340,21 @@ def train(
     train_dataset = get_train_dataset()
     print(f"Training samples: {len(train_dataset)}")
     
-    # Load reference model if using custom KL regularization
+    # Load policy model (we load it explicitly so we can pass it to KL functions)
+    policy_model = None
     ref_model = None
+    
     if kl_type != "none":
-        print(f"Loading reference model for {kl_type} KL regularization...")
+        # For custom KL, we need both policy and reference models
+        print(f"Loading policy model for {kl_type} KL regularization...")
+        policy_model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=dtype,
+        )
+        policy_model = policy_model.to(device)
+        print(f"Policy model loaded")
+        
+        print(f"Loading reference model (frozen copy)...")
         ref_model = AutoModelForCausalLM.from_pretrained(
             model_name,
             torch_dtype=dtype,
@@ -376,15 +385,17 @@ def train(
         shaping=reward_shaping,
         kl_type=kl_type,
         kl_coef=kl_coef,
+        policy_model=policy_model,
         ref_model=ref_model,
         tokenizer=tokenizer,
         base_scorer=base_scorer,
         negate=negate_reward,
+        reward_module=rewards_solution,
     )
     
     # Print reward configuration
     scorer_name = "HACKABLE (word counting)" if hackable_reward else "Sentiment model"
-    shaping_desc = {"linear": "linear", "exponential": "exponential (temp=1.0)"}
+    shaping_desc = {"linear": "linear", "shaped": "custom (from rewards module)"}
     kl_desc = {
         "none": "None",
         "forward": f"Forward KL (coef={kl_coef})",
@@ -477,8 +488,11 @@ def train(
         max_new_tokens=config_preset.max_completion_length,
     )
     
+    # Use policy_model if loaded (for custom KL), otherwise let TRL load from model_name
+    model_for_trainer = policy_model if policy_model is not None else model_name
+    
     trainer = GRPOTrainer(
-        model=model_name,
+        model=model_for_trainer,
         args=training_args,
         train_dataset=train_dataset,
         processing_class=tokenizer,
@@ -563,7 +577,7 @@ def main():
     # Reward configuration
     parser.add_argument(
         "--reward_shaping", type=str, default="linear",
-        choices=["linear", "exponential"],
+        choices=["linear", "shaped"],
         help="Reward shaping method"
     )
     parser.add_argument(

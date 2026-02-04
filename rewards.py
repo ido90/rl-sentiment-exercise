@@ -1,115 +1,68 @@
 """
-Reward Functions Module for RL Sentiment Fine-tuning Exercise.
+Reward Functions for RL Sentiment Fine-tuning - STUDENT VERSION
 
-This module contains reward functions used to train language models to generate
-positive sentiment text using GRPO (Group Relative Policy Optimization).
+This module contains reward function implementations for the RL exercise.
+Students should implement the functions marked with TODO.
 
-STUDENT EXERCISE:
------------------
-You need to implement the functions marked with TODO.
-Each function takes completions and returns a list of reward values.
+Functions to implement:
+1. shaped_reward() - Apply reward shaping to rewards
+2. kl_penalty_forward() - Forward KL divergence penalty
+3. kl_penalty_backward() - Backward KL divergence penalty
 
-The sentiment scores are provided by the `sentiment` module - you receive
-raw scores in [0, 1] where 0=negative, 0.5=neutral, 1=positive.
-
-Your job is to transform these scores into effective RL rewards.
-
-Concepts covered:
-1. Basic reward from sentiment scores
-2. Reward shaping (linear and exponential transformations)
-3. KL divergence regularization (forward and backward)
+The base sentiment_reward() is provided as a working example.
 """
 
-import math
-import torch
 from sentiment import get_sentiment_scores
 
 
 # =============================================================================
-# EXERCISE 1: Basic Sentiment Reward
+# BASE REWARD FUNCTION (Provided - working example)
 # =============================================================================
 
-def sentiment_reward(completions: list[str], **kwargs) -> list[float]:
+def sentiment_reward(completions: list[str]) -> list[float]:
     """
-    Basic sentiment reward function.
+    Compute sentiment reward for a list of completions.
     
-    Computes the reward directly from the sentiment score for each completion.
-    This is the simplest reward formulation: reward = sentiment_score.
+    This is the base reward function that returns sentiment scores in [0, 1].
+    Higher values indicate more positive sentiment.
     
     Args:
         completions: List of generated text completions
-        **kwargs: Additional arguments (prompts, etc.) - not used here
     
     Returns:
-        List of reward values in [0, 1], one per completion
-    
-    TODO: Implement this function
-    
-    Hints:
-        - Use get_sentiment_scores(completions) to get scores in [0, 1]
-        - The reward should directly be the sentiment score
-    
-    Example:
-        >>> rewards = sentiment_reward(["Great movie!", "Terrible film."])
-        >>> # rewards should be approximately [0.85, 0.15]
+        List of sentiment scores in [0, 1]
     """
-    # =========================================================================
-    # YOUR CODE HERE (1-2 lines)
-    # =========================================================================
-    raise NotImplementedError(
-        "Exercise 1: Implement sentiment_reward using get_sentiment_scores()"
-    )
-    # =========================================================================
-    # END YOUR CODE
-    # =========================================================================
+    return get_sentiment_scores(completions)
 
 
 # =============================================================================
-# EXERCISE 2: Reward Shaping
+# REWARD SHAPING (Exercise 1)
 # =============================================================================
 
-def shaped_reward_exponential(
-    completions: list[str],
-    temperature: float = 1.0,
-    **kwargs
-) -> list[float]:
+def shaped_reward(scores: list[float], completions: list[str]) -> list[float]:
     """
-    Exponential reward shaping.
+    Apply custom reward shaping to transform raw sentiment scores.
     
-    Transforms the raw sentiment score using an exponential transformation:
-        reward = exp(score / temperature) - 1
-    
-    This creates a non-linear reward that:
-    - Gives much higher rewards for very positive sentiment
-    - The temperature controls the "sharpness" of the exponential
-    - Lower temperature = more extreme differentiation
+    Reward shaping modifies the raw reward signal to change learning dynamics.
+    This is your chance to experiment with different shaping strategies.
     
     Args:
-        completions: List of generated text completions
-        temperature: Controls the steepness of the exponential (default 1.0)
-        **kwargs: Additional arguments - not used here
+        scores: Raw sentiment scores in [0, 1] from the sentiment model
+        completions: The generated text completions (useful for extracting length, word repetition, etc.)
     
     Returns:
         List of shaped reward values
     
-    TODO: Implement this function
+    Potential ideas: numeric transformation (e.g. exponential, polynomial, log); penalize or encourage long responses;
+                     penalize word repetitions; or any idea you think might help.
     
-    Hints:
-        1. Get sentiment scores using get_sentiment_scores()
-        2. Apply: reward = exp(score / temperature) - 1
-        3. Use math.exp() for the exponential
-    
-    Example:
-        With temperature=1.0:
-        - score=0.9 -> reward = exp(0.9) - 1 ≈ 1.46
-        - score=0.5 -> reward = exp(0.5) - 1 ≈ 0.65
-        - score=0.1 -> reward = exp(0.1) - 1 ≈ 0.11
+    TODO: Implement your chosen shaping strategy
     """
     # =========================================================================
-    # YOUR CODE HERE (2-3 lines)
+    # YOUR CODE HERE
     # =========================================================================
     raise NotImplementedError(
-        "Exercise 2b: Implement shaped_reward_exponential"
+        "Exercise 1: Implement reward shaping"
     )
     # =========================================================================
     # END YOUR CODE
@@ -117,104 +70,32 @@ def shaped_reward_exponential(
 
 
 # =============================================================================
-# EXERCISE 3: KL Divergence Regularization
+# KL REGULARIZATION (Exercise 2)
 # =============================================================================
-
-def compute_ref_log_probs(
-    completions: list[str],
-    prompts: list[str],
-    ref_model,
-    tokenizer,
-) -> list[float]:
-    """
-    Compute normalized log probabilities of completions under the reference model.
-    
-    This helper function computes how "likely" each completion is according to
-    the reference model (the original, unfinetuned model). This is used for
-    KL regularization to prevent the policy from drifting too far.
-    
-    Args:
-        completions: List of generated text completions
-        prompts: List of prompts that generated these completions  
-        ref_model: Reference model (frozen copy of initial policy)
-        tokenizer: Tokenizer for the model
-    
-    Returns:
-        List of normalized log probabilities (per-token average)
-        - Values are negative (log probs)
-        - Higher (less negative) = more likely under reference
-        - Lower (more negative) = less likely under reference
-    
-    TODO: Implement this function
-    
-    Hints:
-        1. Concatenate each prompt + completion to get full sequences
-        2. Tokenize and run through ref_model to get logits
-        3. Convert logits to log probabilities: log_softmax(logits, dim=-1)
-        4. For each sequence, sum the log probs of the COMPLETION tokens only
-           (not the prompt tokens)
-        5. Normalize by dividing by number of completion tokens
-    
-    The tricky part is identifying which tokens are "completion" vs "prompt".
-    You'll need to tokenize prompts separately to get their lengths.
-    """
-    # =========================================================================
-    # YOUR CODE HERE (~20-30 lines)
-    # =========================================================================
-    raise NotImplementedError(
-        "Exercise 3a: Implement compute_ref_log_probs\n"
-        "This computes how likely each completion is under the reference model."
-    )
-    # =========================================================================
-    # END YOUR CODE
-    # =========================================================================
-
 
 def kl_penalty_forward(
-    completions: list[str],
-    prompts: list[str],
-    ref_model,
-    tokenizer,
+    log_probs_policy: list[float],
+    log_probs_ref: list[float],
     kl_coef: float = 0.1,
-    **kwargs
 ) -> list[float]:
     """
-    Forward KL regularization: encourages outputs likely under the reference model.
-    
-    Approximates: -D_KL(policy || reference) as a reward bonus.
-    
-    Forward KL is "mode-covering" - it penalizes the policy for generating
-    text that would be unlikely under the reference model. This helps prevent
-    the model from generating degenerate or repetitive text.
-    
-    The reward bonus is: kl_coef * log(P_ref(completion))
-    - Positive when completion is likely under reference (high log prob)
-    - Negative when completion is unlikely under reference (low log prob)
+    Forward KL regularization penalty.
     
     Args:
-        completions: List of generated text completions
-        prompts: List of prompts that generated these completions
-        ref_model: Reference model (frozen copy of initial policy)
-        tokenizer: Tokenizer for the model
-        kl_coef: Coefficient for KL term (higher = stronger regularization)
-        **kwargs: Additional arguments (ignored)
+        log_probs_policy: List of avg log probs under current policy (one per completion, averaged over tokens)
+        log_probs_ref: List of avg log probs under reference model (one per completion, averaged over tokens)
+        kl_coef: Coefficient controlling regularization strength
     
     Returns:
-        List of KL bonus values to ADD to the base reward
+        List of penalty values to ADD to the base reward
     
     TODO: Implement this function
-    
-    Hints:
-        1. Use compute_ref_log_probs() to get log probabilities
-        2. Return kl_coef * log_prob for each completion
-        3. This gives a bonus for "staying close" to the reference
     """
     # =========================================================================
-    # YOUR CODE HERE (2-3 lines)
+    # YOUR CODE HERE (~2-3 lines)
     # =========================================================================
     raise NotImplementedError(
-        "Exercise 3b: Implement kl_penalty_forward\n"
-        "Hint: Return kl_coef * log_prob to reward reference-like outputs"
+        "Exercise 2a: Implement forward KL penalty"
     )
     # =========================================================================
     # END YOUR CODE
@@ -222,145 +103,32 @@ def kl_penalty_forward(
 
 
 def kl_penalty_backward(
-    completions: list[str],
-    prompts: list[str],
-    ref_model,
-    tokenizer,
+    log_probs_policy: list[float],
+    log_probs_ref: list[float],
     kl_coef: float = 0.1,
-    **kwargs
 ) -> list[float]:
     """
-    Backward KL regularization: strongly penalizes outputs unlikely under reference.
-    
-    Approximates: -D_KL(reference || policy) as a reward penalty.
-    
-    Backward KL is "mode-seeking" - it heavily penalizes outputs that have
-    very low probability under the reference model, while being more lenient
-    about outputs that are merely "different but plausible".
-    
-    The penalty uses exponential weighting: -kl_coef * exp(-log(P_ref))
-    - Small penalty when completion is likely under reference
-    - Large penalty when completion is very unlikely under reference
-    
-    This creates different behavior than forward KL:
-    - Forward KL: linear penalty, uniform pressure to match reference
-    - Backward KL: exponential penalty, focuses on avoiding "bad" outputs
-    
+    Backward KL regularization penalty with stronger penalization of deviations.
+
     Args:
-        completions: List of generated text completions
-        prompts: List of prompts that generated these completions
-        ref_model: Reference model (frozen copy of initial policy)
-        tokenizer: Tokenizer for the model
-        kl_coef: Coefficient for KL term (higher = stronger regularization)
-        **kwargs: Additional arguments (ignored)
+        log_probs_policy: List of avg log probs under current policy (one per completion, averaged over tokens)
+        log_probs_ref: List of avg log probs under reference model (one per completion, averaged over tokens)
+        kl_coef: Coefficient controlling regularization strength
     
     Returns:
-        List of KL penalty values to ADD to the base reward (typically negative)
+        List of penalty values to ADD to the base reward
     
     TODO: Implement this function
-    
-    Hints:
-        1. Use compute_ref_log_probs() to get log probabilities
-        2. Apply exponential: penalty = -kl_coef * exp(-log_prob)
-        3. exp(-log_prob) = 1/prob, so low prob -> high penalty
-        4. Consider clamping the exp to avoid numerical overflow
     """
     # =========================================================================
-    # YOUR CODE HERE (3-4 lines)
+    # YOUR CODE HERE (~3-4 lines)
     # =========================================================================
     raise NotImplementedError(
-        "Exercise 3c: Implement kl_penalty_backward\n"
-        "Hint: Use exponential weighting to heavily penalize unlikely outputs"
+        "Exercise 2b: Implement backward KL penalty"
     )
     # =========================================================================
     # END YOUR CODE
     # =========================================================================
-
-
-# =============================================================================
-# COMBINED REWARD FUNCTION (Provided - uses your implementations above)
-# =============================================================================
-
-def make_reward_function(
-    shaping: str = "linear",
-    kl_type: str = "none",
-    kl_coef: float = 0.1,
-    ref_model=None,
-    tokenizer=None,
-    base_scorer=None,
-    negate: bool = False,
-):
-    """
-    Factory function to create a combined reward function.
-    
-    This creates a reward function that:
-    1. Computes base reward using the scorer (with optional shaping)
-    2. Adds KL regularization penalty/bonus (if enabled)
-    3. Optionally negates the final reward (for negative sentiment optimization)
-    
-    Args:
-        shaping: Type of reward shaping ("linear" or "exponential")
-        kl_type: Type of KL regularization ("none", "forward", "backward")
-        kl_coef: Coefficient for KL term
-        ref_model: Reference model (required if kl_type != "none")
-        tokenizer: Tokenizer (required if kl_type != "none")
-        base_scorer: Optional custom scorer function(texts) -> [0,1] scores.
-                     If None, uses sentiment_reward.
-        negate: If True, negate the final reward (optimize for negative sentiment)
-    
-    Returns:
-        A reward function compatible with TRL's GRPOTrainer
-    """
-    if kl_type != "none" and (ref_model is None or tokenizer is None):
-        raise ValueError(f"ref_model and tokenizer required for kl_type={kl_type}")
-    
-    # Use provided scorer or default to sentiment_reward
-    scorer = base_scorer if base_scorer is not None else sentiment_reward
-    
-    def reward_fn(completions: list[str], prompts: list[str] = None, **kwargs) -> list[float]:
-        # Step 1: Compute base reward from scorer
-        raw_scores = scorer(completions)
-        
-        # Step 2: Apply shaping
-        if shaping == "linear":
-            base_rewards = raw_scores
-        elif shaping == "exponential":
-            # Apply exponential shaping to raw scores
-            base_rewards = [shaped_reward_exponential_single(s) for s in raw_scores]
-        else:
-            raise ValueError(f"Unknown shaping: {shaping}")
-        
-        # Step 3: Add KL regularization if enabled
-        if kl_type != "none" and prompts is not None:
-            if kl_type == "forward":
-                kl_terms = kl_penalty_forward(
-                    completions, prompts, ref_model, tokenizer, kl_coef
-                )
-            elif kl_type == "backward":
-                kl_terms = kl_penalty_backward(
-                    completions, prompts, ref_model, tokenizer, kl_coef
-                )
-            else:
-                raise ValueError(f"Unknown kl_type: {kl_type}")
-            
-            # Combine: total_reward = base_reward + kl_term
-            base_rewards = [base + kl for base, kl in zip(base_rewards, kl_terms)]
-        
-        # Step 4: Negate if optimizing for negative sentiment
-        if negate:
-            base_rewards = [-r for r in base_rewards]
-        
-        return base_rewards
-    
-    return reward_fn
-
-
-def shaped_reward_exponential_single(score: float, temperature: float = 1.0) -> float:
-    """Apply exponential shaping to a single [0,1] score."""
-    import math
-    # Shift to [-0.5, 0.5] then apply exponential
-    shifted = score - 0.5
-    return math.exp(shifted / temperature) - 1.0
 
 
 # =============================================================================
@@ -376,21 +144,36 @@ if __name__ == "__main__":
         "It was okay, nothing special.",
     ]
     
-    # Test that student functions raise NotImplementedError
-    print("Verifying student functions raise NotImplementedError...")
+    # Test sentiment reward (provided implementation)
+    print("1. Sentiment Reward (raw scores [0, 1]):")
+    rewards = sentiment_reward(test_texts)
+    for text, reward in zip(test_texts, rewards):
+        print(f"   {reward:.3f}: {text[:40]}...")
     
+    # Test reward shaping (student implementation)
+    print("\n2. Reward Shaping (student exercise):")
+    test_scores = [0.1, 0.3, 0.5, 0.7, 0.9]
+    test_completions = ["bad", "meh", "okay", "good movie", "amazing film!"]
     try:
-        sentiment_reward(test_texts)
-        print("  ERROR: sentiment_reward should raise NotImplementedError")
+        shaped = shaped_reward(test_scores, test_completions)
+        for score, completion, s in zip(test_scores, test_completions, shaped):
+            print(f"   {score:.1f} '{completion}' -> {s:.3f}")
     except NotImplementedError:
-        print("  OK: sentiment_reward raises NotImplementedError")
+        print(f"   Not implemented yet")
     
+    # Test KL penalties (student implementation)
+    print("\n3. KL Penalties (student exercise):")
+    test_lp_policy = [-2.0, -3.0, -1.5]  # Example log probs
+    test_lp_ref = [-2.5, -2.5, -2.5]
     try:
-        shaped_reward_exponential(test_texts)
-        print("  ERROR: shaped_reward_exponential should raise NotImplementedError")
+        fwd = kl_penalty_forward(test_lp_policy, test_lp_ref, 0.1)
+        print(f"   Forward KL: {fwd}")
     except NotImplementedError:
-        print("  OK: shaped_reward_exponential raises NotImplementedError")
+        print(f"   Forward KL: Not implemented yet")
+    try:
+        bwd = kl_penalty_backward(test_lp_policy, test_lp_ref, 0.1)
+        print(f"   Backward KL: {bwd}")
+    except NotImplementedError:
+        print(f"   Backward KL: Not implemented yet")
     
-    print("\nAll tests passed! Students need to implement the TODO functions.")
-    print("\nHint: Use get_sentiment_scores() from the sentiment module to get")
-    print("raw scores, then apply your transformations.")
+    print("\nDone!")
