@@ -53,21 +53,6 @@ python rewards.py  # Should show NotImplementedError for student functions
 
 ---
 
-## Project Structure
-
-```
-sentiment/
-├── rewards.py            # Student exercises (implement TODOs here)
-├── rewards_solution.py   # Solutions (instructor only)
-├── reward_utils.py       # Reward infrastructure
-├── sentiment.py          # Sentiment model
-├── train.py              # Training script
-├── data.py               # Prompt dataset
-└── README.md
-```
-
----
-
 ## Exercises
 
 ### Exercise 0: Train for Positive Sentiment
@@ -143,6 +128,21 @@ Extended parameters:
 | `--beta` | TRL's internal KL strength | 0.0 |
 | `--hackable_reward` | Use exploitable word-counting reward | False |
 | `--negate_reward` | Optimize for negative sentiment | False |
+
+---
+
+## Project Structure
+
+```
+sentiment/
+├── rewards.py            # Student exercises (implement TODOs here)
+├── rewards_solution.py   # Solutions (instructor only)
+├── reward_utils.py       # Reward infrastructure
+├── sentiment.py          # Sentiment model
+├── train.py              # Training script
+├── data.py               # Prompt dataset
+└── README.md
+```
 
 ---
 
