@@ -36,9 +36,7 @@ except ImportError:
 
 from data import get_train_dataset, get_validation_dataset, VALIDATION_PROMPTS
 from sentiment import get_sentiment_scores, get_hackable_scores
-# Import from solution file for working training; students use rewards.py
 from reward_utils import make_reward_function
-import rewards_solution
 
 
 # =============================================================================
@@ -227,6 +225,7 @@ def train(
     hackable_reward: bool = False,
     negate_reward: bool = False,
     beta: float = 0.0,
+    use_solution: bool = False,
     use_peft: bool = False,
     log_completions: bool = False,
     seed: int = 42,
@@ -249,6 +248,7 @@ def train(
         hackable_reward: Use word-counting reward (demonstrates reward hacking)
         negate_reward: Negate reward to optimize for negative sentiment
         beta: TRL's internal KL regularization coefficient (0.0 = disabled)
+        use_solution: Use rewards_solution.py instead of rewards.py (for testing)
         use_peft: Whether to use LoRA for parameter-efficient training
         log_completions: Whether to log TRL's internal training completions (default: False,
                          we use our own validation callback instead)
@@ -366,6 +366,14 @@ def train(
             param.requires_grad = False
         print(f"Reference model loaded (frozen)")
     
+    # Import reward module (student code or solution)
+    if use_solution:
+        import rewards_solution as reward_module
+        print("Using rewards_solution.py (solution code)")
+    else:
+        import rewards as reward_module
+        print("Using rewards.py (student code)")
+    
     # Create reward function using factory (supports all configurations)
     base_scorer = None
     if hackable_reward:
@@ -390,7 +398,7 @@ def train(
         tokenizer=tokenizer,
         base_scorer=base_scorer,
         negate=negate_reward,
-        reward_module=rewards_solution,
+        reward_module=reward_module,
     )
     
     # Print reward configuration
@@ -604,6 +612,10 @@ def main():
     
     # Training options
     parser.add_argument(
+        "--use_solution", action="store_true",
+        help="Use rewards_solution.py instead of rewards.py (for testing/development)"
+    )
+    parser.add_argument(
         "--use_peft", action="store_true",
         help="Use LoRA for parameter-efficient training"
     )
@@ -645,6 +657,7 @@ def main():
         hackable_reward=args.hackable_reward,
         negate_reward=args.negate_reward,
         beta=args.beta,
+        use_solution=args.use_solution,
         use_peft=args.use_peft,
         log_completions=args.log_trl_completions,
         seed=args.seed,

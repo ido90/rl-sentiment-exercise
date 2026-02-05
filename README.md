@@ -55,6 +55,9 @@ python rewards.py  # Should show NotImplementedError for student functions
 
 ## Exercises
 
+Students implement their code in `rewards.py`, which is used by default when running `train.py`.
+A reference solution is provided in `rewards_solution.py`. To run with the solution code (e.g., for testing or comparison), use `--use_solution`.
+
 ### Exercise 0: Train for Positive Sentiment
 
 Run the vanilla GRPO fine-tuning using:
@@ -128,6 +131,7 @@ Extended parameters:
 | `--beta` | TRL's internal KL strength | 0.0 |
 | `--hackable_reward` | Use exploitable word-counting reward | False |
 | `--negate_reward` | Optimize for negative sentiment | False |
+| `--use_solution` | Use solution code instead of student code | False |
 
 ---
 
