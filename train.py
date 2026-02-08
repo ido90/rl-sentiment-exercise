@@ -81,20 +81,24 @@ class ValidationCallback(TrainerCallback):
             
         self._run_validation(model, state.global_step)
     
-    def _run_validation(self, model, step):
-        """Generate completions and compute statistics."""
+    def _run_validation(self, model, step, batch_size=16):
+        """Generate completions and compute statistics using batched generation."""
         model.eval()
         device = next(model.parameters()).device
         
         completions = []
         
-        # Generate 1 completion per validation prompt
+        # Generate completions in batches for efficiency
         with torch.no_grad():
-            for prompt in self.validation_prompts:
+            for i in range(0, len(self.validation_prompts), batch_size):
+                batch_prompts = self.validation_prompts[i:i + batch_size]
+                
+                # Tokenize batch with left padding (required for decoder-only generation)
+                self.tokenizer.padding_side = "left"
                 inputs = self.tokenizer(
-                    prompt, 
-                    return_tensors="pt", 
-                    padding=True
+                    batch_prompts,
+                    return_tensors="pt",
+                    padding=True,
                 ).to(device)
                 
                 outputs = model.generate(
@@ -106,8 +110,13 @@ class ValidationCallback(TrainerCallback):
                     pad_token_id=self.tokenizer.pad_token_id,
                 )
                 
-                completion = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-                completions.append(completion)
+                # Decode each output in the batch
+                for output in outputs:
+                    completion = self.tokenizer.decode(output, skip_special_tokens=True)
+                    completions.append(completion)
+                
+                # Restore default padding side
+                self.tokenizer.padding_side = "right"
         
         # Compute sentiment scores for all completions
         scores = get_sentiment_scores(completions)
@@ -436,7 +445,7 @@ def train(
         max_grad_norm=1.0,
         
         # Logging
-        logging_steps=10,
+        logging_steps=20,
         log_completions=log_completions,
         report_to="wandb" if use_wandb else "none",
         
