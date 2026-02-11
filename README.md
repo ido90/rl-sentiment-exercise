@@ -73,23 +73,25 @@ Observe the results.
 Refer to both the numeric validation scores, and the model output examples.
 Do the outputs look like natural language? What might be going wrong?
 
-### Exercise 1: Reward Shaping
+### Exercise 1: KL Regularization
 
-In `rewards.py`, implement `shaped_reward()` to transform raw sentiment scores.
-
-Ideas to try:
-- **Exponential**: Amplify differences from neutral sentiment
-- **Length penalty**: Penalize very short/long responses
-- **Repetition penalty**: Detect and penalize "great great great" outputs
-
-Report the effects on the fine-tuned model.
-
-### Exercise 2: KL Regularization
-
-Implement `kl_penalty_forward()` and `kl_penalty_backward()` to prevent the model from drifting too far from the original GPT-2.
+In `rewards.py`, implement `kl_penalty_forward()` and `kl_penalty_backward()` to prevent the model from drifting too far from the original GPT-2.
 Compare the forward and backward regularizations, and tune the regularization coefficient to achieve a model with both positive sentiment and sensible writing.
 
 Note: for the sake of the exercise, you will implement KL-regularization yourself, instead of using TRL's built-in regularization. You receive pre-computed log probabilities for both the current policy model and reference model. To simplify the code, the log probabilities are re-calculated outside TRL, so that you don't need to modify TRL's interface to access them.
+
+### Exercise 2: Reward Shaping
+
+In `rewards.py`, implement `shaped_reward()` to modify raw sentiment scores.
+
+You may aim for a more realistic and positive model - or for any other goal of your choice!
+
+Possible ideas:
+- **Exponential transformation**: Amplify differences from neutral sentiment
+- **Length penalty**: Penalize short/long responses
+- **Repetition penalty**: Detect and penalize "great great great" outputs
+
+Report the effects on the fine-tuned model.
 
 ---
 
