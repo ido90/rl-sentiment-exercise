@@ -36,41 +36,7 @@ def sentiment_reward(completions: list[str]) -> list[float]:
 
 
 # =============================================================================
-# REWARD SHAPING (Exercise 1)
-# =============================================================================
-
-def shaped_reward(scores: list[float], completions: list[str]) -> list[float]:
-    """
-    Apply custom reward shaping to transform raw sentiment scores.
-    
-    Reward shaping modifies the raw reward signal to change learning dynamics.
-    This is your chance to experiment with different shaping strategies.
-    
-    Args:
-        scores: Raw sentiment scores in [0, 1] from the sentiment model
-        completions: The generated text completions (useful for extracting length, word repetition, etc.)
-    
-    Returns:
-        List of shaped reward values
-    
-    Potential ideas: numeric transformation (e.g. exponential, polynomial, log); penalize or encourage long responses;
-                     penalize word repetitions; or any idea you think might help.
-    
-    TODO: Implement your chosen shaping strategy
-    """
-    # =========================================================================
-    # YOUR CODE HERE
-    # =========================================================================
-    raise NotImplementedError(
-        "Exercise 1: Implement reward shaping"
-    )
-    # =========================================================================
-    # END YOUR CODE
-    # =========================================================================
-
-
-# =============================================================================
-# KL REGULARIZATION (Exercise 2)
+# KL REGULARIZATION (Exercise 1)
 # =============================================================================
 
 def kl_penalty_forward(
@@ -92,10 +58,10 @@ def kl_penalty_forward(
     TODO: Implement this function
     """
     # =========================================================================
-    # YOUR CODE HERE (~2-3 lines)
+    # YOUR CODE HERE
     # =========================================================================
     raise NotImplementedError(
-        "Exercise 2a: Implement forward KL penalty"
+        "Exercise 1a: Implement forward KL penalty"
     )
     # =========================================================================
     # END YOUR CODE
@@ -121,10 +87,44 @@ def kl_penalty_backward(
     TODO: Implement this function
     """
     # =========================================================================
-    # YOUR CODE HERE (~3-4 lines)
+    # YOUR CODE HERE
     # =========================================================================
     raise NotImplementedError(
-        "Exercise 2b: Implement backward KL penalty"
+        "Exercise 1b: Implement backward KL penalty"
+    )
+    # =========================================================================
+    # END YOUR CODE
+    # =========================================================================
+
+
+# =============================================================================
+# REWARD SHAPING (Exercise 2)
+# =============================================================================
+
+def shaped_reward(scores: list[float], completions: list[str]) -> list[float]:
+    """
+    Apply custom reward shaping to transform raw sentiment scores.
+    
+    Reward shaping modifies the raw reward signal to change learning dynamics.
+    This is your chance to experiment with different shaping strategies.
+    
+    Args:
+        scores: Raw sentiment scores in [0, 1] from the sentiment model
+        completions: The generated text completions (useful for extracting length, word repetition, etc.)
+    
+    Returns:
+        List of shaped reward values
+    
+    Potential ideas: numeric transformation (e.g. exponential, polynomial, log); penalize or encourage long responses;
+                     penalize word repetitions; or any idea you think might help.
+    
+    TODO: Implement your chosen shaping strategy
+    """
+    # =========================================================================
+    # YOUR CODE HERE
+    # =========================================================================
+    raise NotImplementedError(
+        "Exercise 2: Implement reward shaping"
     )
     # =========================================================================
     # END YOUR CODE
