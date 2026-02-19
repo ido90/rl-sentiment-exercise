@@ -58,7 +58,7 @@ def kl_penalty_forward(
     TODO: Implement this function
     """
     # =========================================================================
-    # YOUR CODE HERE
+    # YOUR CODE HERE (3-4 lines)
     # =========================================================================
     raise NotImplementedError(
         "Exercise 1a: Implement forward KL penalty"
@@ -87,7 +87,7 @@ def kl_penalty_backward(
     TODO: Implement this function
     """
     # =========================================================================
-    # YOUR CODE HERE
+    # YOUR CODE HERE (5-6 lines)
     # =========================================================================
     raise NotImplementedError(
         "Exercise 1b: Implement backward KL penalty"
