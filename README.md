@@ -136,7 +136,6 @@ Extended parameters:
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `--beta` | TRL's internal KL strength | 0.0 |
-| `--hackable_reward` | Use exploitable word-counting reward | False |
 | `--negate_reward` | Optimize for negative sentiment | False |
 | `--use_solution` | Use solution code instead of student code | False |
 

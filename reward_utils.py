@@ -9,7 +9,7 @@ Students should focus on rewards.py for the exercise implementations.
 """
 
 import torch
-from typing import Callable, Optional
+from typing import Optional
 
 
 def compute_log_probs(
@@ -94,7 +94,6 @@ def make_reward_function(
     policy_model=None,
     ref_model=None,
     tokenizer=None,
-    base_scorer: Optional[Callable] = None,
     negate: bool = False,
     reward_module=None,
 ):
@@ -102,20 +101,18 @@ def make_reward_function(
     Factory function to create a combined reward function.
     
     This creates a reward function that:
-    1. Computes base reward using the scorer (with optional shaping)
+    1. Computes base reward using sentiment_reward (with optional shaping)
     2. Optionally negates the base reward (for negative sentiment optimization)
-    3. Adds KL regularization penalty (if enabled)
+    3. Subtracts KL regularization penalty (if enabled)
     
     Args:
-        shaping: Type of reward shaping ("linear" or "exponential")
+        shaping: Type of reward shaping ("linear" or "shaped")
         kl_type: Type of KL regularization ("none", "forward", "backward")
         kl_coef: Coefficient for KL term
         policy_model: Current policy model (required if kl_type != "none")
         ref_model: Reference model (required if kl_type != "none")
         tokenizer: Tokenizer (required if kl_type != "none")
-        base_scorer: Optional custom scorer function(texts) -> [0,1] scores.
-                     If None, uses sentiment_reward from reward_module.
-        negate: If True, negate the final reward (optimize for negative sentiment)
+        negate: If True, negate the base reward (optimize for negative sentiment)
         reward_module: Module containing reward functions (rewards or rewards_solution)
     
     Returns:
@@ -125,11 +122,9 @@ def make_reward_function(
         raise ValueError(f"policy_model, ref_model, and tokenizer required for kl_type={kl_type}")
     
     if reward_module is None:
-        # Default to importing rewards_solution
         import rewards_solution as reward_module
     
-    # Use provided scorer or default to sentiment_reward
-    scorer = base_scorer if base_scorer is not None else reward_module.sentiment_reward
+    scorer = reward_module.sentiment_reward
     
     def reward_fn(completions: list[str], prompts: list[str] = None, **kwargs) -> list[float]:
         # Step 1: Compute base reward from scorer

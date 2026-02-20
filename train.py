@@ -25,8 +25,8 @@ from typing import Optional
 
 import torch
 import numpy as np
-from transformers import AutoTokenizer, AutoModelForCausalLM, TrainerCallback
-from trl import GRPOTrainer, GRPOConfig
+import transformers
+import trl
 
 # Optional wandb import
 try:
@@ -36,7 +36,7 @@ except ImportError:
     WANDB_AVAILABLE = False
 
 from data import get_train_dataset, get_validation_dataset, VALIDATION_PROMPTS
-from sentiment import get_sentiment_scores, get_hackable_scores
+from sentiment import get_sentiment_scores
 from reward_utils import make_reward_function
 
 
@@ -44,7 +44,7 @@ from reward_utils import make_reward_function
 # VALIDATION CALLBACK
 # =============================================================================
 
-class ValidationCallback(TrainerCallback):
+class ValidationCallback(transformers.TrainerCallback):
     """
     Custom callback to run validation on held-out prompts during training.
     
@@ -255,6 +255,106 @@ PRESETS = {
 
 
 # =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def _init_wandb(
+    wandb_project: str,
+    wandb_run_name: Optional[str],
+    *,
+    preset: str,
+    negate_reward: bool,
+    reward_shaping: str,
+    kl_type: str,
+    kl_coef: float,
+    config: dict,
+) -> bool:
+    """Initialize Weights & Biases logging. Returns whether wandb is active."""
+    if not WANDB_AVAILABLE:
+        print("Warning: wandb not installed. Install with: pip install wandb")
+        return False
+
+    if wandb_run_name:
+        run_name = wandb_run_name
+    else:
+        parts = [preset]
+        if negate_reward:
+            parts.append("NEG")
+        parts.append(reward_shaping)
+        parts.append(f"lr{config['learning_rate']}")
+        if kl_type != "none":
+            parts.append(f"kl-{kl_type}")
+            if kl_coef != 0.1:
+                parts.append(f"c{kl_coef}")
+        run_name = "_".join(parts)
+
+    wandb.init(
+        project=wandb_project,
+        name=run_name,
+        config=config,
+        save_code=False,
+    )
+    print(f"Logging to W&B: {wandb_project}/{run_name}")
+    return True
+
+
+def _load_models(
+    model_name: str,
+    device: str,
+    dtype: torch.dtype,
+    kl_type: str,
+    compute_perplexity: bool,
+):
+    """Load policy and/or reference models as needed.
+
+    Returns (policy_model, ref_model) -- either may be None.
+    """
+    policy_model = None
+    ref_model = None
+
+    def _load_frozen_ref(reason: str):
+        print(f"Loading reference model ({reason})...")
+        m = transformers.AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=dtype)
+        m = m.to(device)
+        m.eval()
+        for p in m.parameters():
+            p.requires_grad = False
+        print("Reference model loaded (frozen)")
+        return m
+
+    if kl_type != "none":
+        print(f"Loading policy model for {kl_type} KL regularization...")
+        policy_model = transformers.AutoModelForCausalLM.from_pretrained(
+            model_name, torch_dtype=dtype,
+        )
+        policy_model = policy_model.to(device)
+        print("Policy model loaded")
+        ref_model = _load_frozen_ref(f"for {kl_type} KL regularization")
+    elif compute_perplexity:
+        ref_model = _load_frozen_ref("for perplexity evaluation")
+
+    return policy_model, ref_model
+
+
+def _print_config_summary(
+    config_preset: "TrainingPreset",
+    max_steps: int,
+    num_generations: int,
+    beta: float,
+):
+    """Print a human-readable GRPO configuration summary."""
+    print(f"\nGRPO Configuration:")
+    print(f"  - Max steps: {max_steps}")
+    print(f"  - Batch size: {config_preset.per_device_train_batch_size}")
+    print(f"  - Gradient accumulation: {config_preset.gradient_accumulation_steps}")
+    print(f"  - Group size (num_generations): {num_generations}")
+    print(f"  - Max completion length: {config_preset.max_completion_length}")
+    print(f"  - Learning rate: {config_preset.learning_rate}")
+    print(f"  - Temperature: {config_preset.temperature}")
+    print(f"  - KL beta (TRL internal): {beta}")
+
+
+# =============================================================================
 # TRAINING FUNCTION
 # =============================================================================
 
@@ -267,7 +367,6 @@ def train(
     reward_shaping: str = "linear",
     kl_type: str = "none",
     kl_coef: float = 0.1,
-    hackable_reward: bool = False,
     negate_reward: bool = False,
     beta: float = 0.0,
     use_solution: bool = False,
@@ -291,7 +390,6 @@ def train(
         reward_shaping: "linear" or "shaped" (custom shaping from rewards module)
         kl_type: Custom KL regularization in reward ("none", "forward", "backward")
         kl_coef: Coefficient for custom KL regularization (default: 0.1)
-        hackable_reward: Use word-counting reward (demonstrates reward hacking)
         negate_reward: Negate reward to optimize for negative sentiment
         beta: TRL's internal KL regularization coefficient (0.0 = disabled)
         use_solution: Use rewards_solution.py instead of rewards.py (for testing)
@@ -316,50 +414,32 @@ def train(
     
     # Initialize wandb if enabled
     if use_wandb:
-        if not WANDB_AVAILABLE:
-            print("Warning: wandb not installed. Install with: pip install wandb")
-            use_wandb = False
-        else:
-            # Build descriptive run name from config
-            if wandb_run_name:
-                run_name = wandb_run_name
-            else:
-                parts = [preset]
-                if negate_reward:
-                    parts.append("NEG")
-                if hackable_reward:
-                    parts.append("HACKABLE")
-                parts.append(reward_shaping)
-                parts.append(f"lr{config_preset.learning_rate}")
-                if kl_type != "none":
-                    parts.append(f"kl-{kl_type}")
-                    if kl_coef != 0.1:  # Include coef if non-default
-                        parts.append(f"c{kl_coef}")
-                run_name = "_".join(parts)
-            wandb.init(
-                project=wandb_project,
-                name=run_name,
-                config={
-                    "model_name": model_name,
-                    "preset": preset,
-                    "max_steps": actual_max_steps,
-                    "num_generations": actual_num_generations,
-                    "reward_shaping": reward_shaping,
-                    "kl_type": kl_type,
-                    "kl_coef": kl_coef,
-                    "hackable_reward": hackable_reward,
-                    "negate_reward": negate_reward,
-                    "beta": beta,
-                    "use_peft": use_peft,
-                    "learning_rate": config_preset.learning_rate,
-                    "batch_size": config_preset.per_device_train_batch_size,
-                    "gradient_accumulation_steps": config_preset.gradient_accumulation_steps,
-                    "max_completion_length": config_preset.max_completion_length,
-                    "seed": seed,
-                },
-                save_code=False,  # Don't save model code to wandb
-            )
-            print(f"Logging to W&B: {wandb_project}/{run_name}")
+        use_wandb = _init_wandb(
+            wandb_project,
+            wandb_run_name,
+            preset=preset,
+            negate_reward=negate_reward,
+            reward_shaping=reward_shaping,
+            kl_type=kl_type,
+            kl_coef=kl_coef,
+            config={
+                "model_name": model_name,
+                "preset": preset,
+                "max_steps": actual_max_steps,
+                "num_generations": actual_num_generations,
+                "reward_shaping": reward_shaping,
+                "kl_type": kl_type,
+                "kl_coef": kl_coef,
+                "negate_reward": negate_reward,
+                "beta": beta,
+                "use_peft": use_peft,
+                "learning_rate": config_preset.learning_rate,
+                "batch_size": config_preset.per_device_train_batch_size,
+                "gradient_accumulation_steps": config_preset.gradient_accumulation_steps,
+                "max_completion_length": config_preset.max_completion_length,
+                "seed": seed,
+            },
+        )
     
     # Determine device and dtype
     if torch.cuda.is_available():
@@ -373,7 +453,7 @@ def train(
     
     # Load tokenizer
     print(f"Loading tokenizer: {model_name}")
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
     
     # GPT-2 doesn't have a pad token by default
     if tokenizer.pad_token is None:
@@ -387,41 +467,10 @@ def train(
     train_dataset = get_train_dataset()
     print(f"Training samples: {len(train_dataset)}")
     
-    # Load policy model (we load it explicitly so we can pass it to KL functions)
-    policy_model = None
-    ref_model = None
-    
-    if kl_type != "none":
-        # For custom KL, we need both policy and reference models
-        print(f"Loading policy model for {kl_type} KL regularization...")
-        policy_model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=dtype,
-        )
-        policy_model = policy_model.to(device)
-        print(f"Policy model loaded")
-        
-        print(f"Loading reference model (frozen copy)...")
-        ref_model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=dtype,
-        )
-        ref_model = ref_model.to(device)
-        ref_model.eval()
-        for param in ref_model.parameters():
-            param.requires_grad = False
-        print(f"Reference model loaded (frozen)")
-    elif compute_perplexity:
-        print(f"Loading reference model for perplexity evaluation...")
-        ref_model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=dtype,
-        )
-        ref_model = ref_model.to(device)
-        ref_model.eval()
-        for param in ref_model.parameters():
-            param.requires_grad = False
-        print(f"Reference model loaded (frozen)")
+    # Load models
+    policy_model, ref_model = _load_models(
+        model_name, device, dtype, kl_type, compute_perplexity,
+    )
     
     # Import reward module (student code or solution)
     if use_solution:
@@ -431,20 +480,8 @@ def train(
         import rewards as reward_module
         print("Using rewards.py (student code)")
     
-    # Create reward function using factory (supports all configurations)
-    base_scorer = None
-    if hackable_reward:
-        print("\n" + "!" * 60)
-        print("WARNING: Using HACKABLE reward function!")
-        print("This counts positive words and is easily exploited.")
-        print("The model may learn degenerate 'great great great' outputs.")
-        print("!" * 60 + "\n")
-        base_scorer = get_hackable_scores
-    
     if negate_reward:
-        print("\n" + "!" * 60)
         print("NEGATING REWARD: Optimizing for NEGATIVE sentiment!")
-        print("!" * 60 + "\n")
     
     reward_func = make_reward_function(
         shaping=reward_shaping,
@@ -453,13 +490,11 @@ def train(
         policy_model=policy_model,
         ref_model=ref_model,
         tokenizer=tokenizer,
-        base_scorer=base_scorer,
         negate=negate_reward,
         reward_module=reward_module,
     )
     
     # Print reward configuration
-    scorer_name = "HACKABLE (word counting)" if hackable_reward else "Sentiment model"
     shaping_desc = {"linear": "linear", "shaped": "custom (from rewards module)"}
     kl_desc = {
         "none": "None",
@@ -467,12 +502,12 @@ def train(
         "backward": f"Backward KL (coef={kl_coef})",
     }
     negate_str = " [NEGATED]" if negate_reward else ""
-    print(f"Reward: {scorer_name}, shaping={shaping_desc.get(reward_shaping, reward_shaping)}{negate_str}")
+    print(f"Reward: Sentiment model, shaping={shaping_desc.get(reward_shaping, reward_shaping)}{negate_str}")
     if kl_type != "none":
         print(f"KL regularization: {kl_desc.get(kl_type, kl_type)}")
     
     # Configure GRPO training
-    training_args = GRPOConfig(
+    training_args = trl.GRPOConfig(
         output_dir=output_dir,
         
         # Training parameters
@@ -510,16 +545,7 @@ def train(
         seed=seed,
     )
     
-    # Print configuration summary
-    print(f"\nGRPO Configuration:")
-    print(f"  - Max steps: {actual_max_steps}")
-    print(f"  - Batch size: {config_preset.per_device_train_batch_size}")
-    print(f"  - Gradient accumulation: {config_preset.gradient_accumulation_steps}")
-    print(f"  - Group size (num_generations): {actual_num_generations}")
-    print(f"  - Max completion length: {config_preset.max_completion_length}")
-    print(f"  - Learning rate: {config_preset.learning_rate}")
-    print(f"  - Temperature: {config_preset.temperature}")
-    print(f"  - KL beta (TRL internal): {beta}")
+    _print_config_summary(config_preset, actual_max_steps, actual_num_generations, beta)
     
     # Initialize trainer
     print("\nInitializing GRPOTrainer...")
@@ -558,7 +584,7 @@ def train(
     # Use policy_model if loaded (for custom KL), otherwise let TRL load from model_name
     model_for_trainer = policy_model if policy_model is not None else model_name
     
-    trainer = GRPOTrainer(
+    trainer = trl.GRPOTrainer(
         model=model_for_trainer,
         args=training_args,
         train_dataset=train_dataset,
@@ -657,10 +683,6 @@ def main():
         help="Coefficient for custom KL regularization (default: 5.0)"
     )
     parser.add_argument(
-        "--hackable_reward", action="store_true", default=False,
-        help="Use hackable word-counting reward (demonstrates reward hacking)"
-    )
-    parser.add_argument(
         "--negate_reward", action="store_true", default=False,
         help="Negate reward to optimize for negative sentiment"
     )
@@ -717,7 +739,6 @@ def main():
         reward_shaping=args.reward_shaping,
         kl_type=args.kl_type,
         kl_coef=args.kl_coef,
-        hackable_reward=args.hackable_reward,
         negate_reward=args.negate_reward,
         beta=args.beta,
         use_solution=args.use_solution,
