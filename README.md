@@ -9,10 +9,9 @@ The course is organized by NVIDIA Research in collaboration with Google Research
 
 In this exercise, you will:
 1. Train GPT-2 to generate positive sentiment text.
-2. Observe reward hacking.
-3. Implement KL divergence regularization.
-4. Implement reward shaping functions.
-5. Tune the reward, the regularization, and the training configuration to achieve both positive sentiment and sensible responses.
+2. Observe reward hacking and resolve it via KL divergence regularization.
+3. Reshape rewards to obtain different model behaviors.
+4. Compare RL vs. prompt engineering.
 
 ## Prerequisites
 
@@ -61,7 +60,20 @@ python rewards.py  # Should show NotImplementedError for student functions
 Students implement their code in `rewards.py`, which is used by default when running `train.py`.
 A reference solution is provided in `rewards_solution.py`. To run with the reference solution code, use `--use_solution`.
 
-### Exercise 0: Train for Positive Sentiment
+### Exercise 1: Review the Pipeline
+
+(Note: to save time, you may start running Exercise 2 before reviewing the questions in Exercise 1.)
+
+Read through the codebase to understand the full RL fine-tuning pipeline. There are **9 comprehension questions** (Q1–Q9) embedded as comments throughout the code. Search for `QUESTION Q` across these files:
+
+- `data.py` — Q1, Q2 (data and prompts)
+- `sentiment.py` — Q3 (reward model)
+- `reward_utils.py` — Q4 (reward function wiring)
+- `train.py` — Q5–Q9 (validation, training data, GRPO config, and trainer)
+
+Read each question in context, and make sure you can answer it before moving on.
+
+### Exercise 2: Train for Positive Sentiment
 
 Run the vanilla GRPO fine-tuning using:
 
@@ -73,28 +85,15 @@ Observe the results.
 Refer to both the numeric validation scores, and the model output examples.
 Do the outputs look like natural language? What might be going wrong?
 
-### Exercise 1: Review the Pipeline
-
-Read through the codebase to understand the full RL fine-tuning pipeline. There are **10 comprehension questions** (Q1–Q10) embedded as comments throughout the code. Search for `QUESTION Q` across these files:
-
-- `data.py` — Q1, Q2 (data and environment)
-- `sentiment.py` — Q3, Q4 (reward models)
-- `reward_utils.py` — Q5 (reward function wiring)
-- `train.py` — Q6–Q10 (training configuration and loop)
-
-Read each question in context, and make sure you can answer it before moving on.
-
-### Exercise 2: KL Regularization
+### Exercise 3: KL Regularization
 
 * In `rewards.py`, implement `kl_penalty_forward()` and `kl_penalty_backward()` to prevent the model from drifting too far from the original GPT-2.
 * Run and compare the forward and backward regularizations.
-* Is the learned highly positive? Does it provide sensible writing? Try to tune the regularization coefficient to achieve a model with both positive sentiment and sensible writing.
+* Is the learned model highly positive? Does it provide sensible writing? Try to tune the regularization coefficient to achieve a model with both positive sentiment and sensible writing.
 
-```
-Note: for the sake of the exercise, you will implement KL-regularization yourself, instead of using TRL's built-in regularization. You receive pre-computed log probabilities for both the current policy model and reference model. To simplify the code, we re-calculate the the log probabilities outside TRL, so that the student can access them without modifying TRL's interface.
-```
+> **Technical note**: TRL has built-in KL regularization, but in this exercise you implement it yourself. You receive pre-computed per-token log probabilities for both the current policy and the reference model. These are re-calculated outside TRL so that you can access them without modifying TRL's interface.
 
-### Exercise 3: Reward Shaping
+### Exercise 4: Reward Shaping
 
 In `rewards.py`, implement `shaped_reward()` to modify raw sentiment scores.
 
@@ -113,7 +112,7 @@ Below are a few ideas, but we encourage you to come up with your own:
 Among the reward metrics you tried, which ones learned well and which ones were harder to optimize?
 Try to explain why.
 
-### Exercise 4: RL vs. prompt engineering
+### Exercise 5: RL vs. Prompt Engineering
 
 Can you get base GPT-2 to match your RL-trained model just by changing the prompt (i.e., concatenate a prefix before the prompt)?
 
@@ -164,10 +163,12 @@ python train.py --reward_shaping shaped
 python train.py --kl_type forward --kl_coef 0.1
 ```
 
-### With Weights & Biases Logging
+### Weights & Biases Logging
+
+Wandb logging is enabled by default. To disable:
 
 ```bash
-python train.py --wandb
+python train.py --no_wandb
 ```
 
 ### Key Parameters
@@ -176,7 +177,7 @@ python train.py --wandb
 |-----------|-------------|---------|
 | `--reward_shaping` | linear, shaped | linear |
 | `--kl_type` | none, forward, backward | none |
-| `--kl_coef` | Custom KL strength | 0.1 |
+| `--kl_coef` | Custom KL strength | 5.0 |
 
 Extended parameters:
 
@@ -192,12 +193,14 @@ Extended parameters:
 
 ```
 sentiment/
+├── train.py              # Main training script (GRPO + TRL)
 ├── rewards.py            # Student exercises (implement TODOs here)
-├── rewards_solution.py   # Solutions (instructor only)
-├── reward_utils.py       # Reward infrastructure
-├── sentiment.py          # Sentiment model
-├── train.py              # Training script
-├── data.py               # Prompt dataset
+├── rewards_solution.py   # Reference solutions
+├── reward_utils.py       # Reward infrastructure (wiring + log probs)
+├── sentiment.py          # Sentiment scoring model
+├── data.py               # Prompt datasets (train + validation)
+├── evaluate.py           # Post-training evaluation
+├── prompt_engineering.py # RL vs prompt engineering comparison
 └── README.md
 ```
 

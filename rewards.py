@@ -36,7 +36,7 @@ def sentiment_reward(completions: list[str]) -> list[float]:
 
 
 # =============================================================================
-# KL REGULARIZATION (Exercise 2)
+# KL REGULARIZATION (Exercise 3)
 #
 # CONTEXT: TRL already includes built-in KL regularization (the `beta` parameter),
 # applied per-token during advantage computation. Here you re-implement KL
@@ -119,7 +119,7 @@ def kl_penalty_backward(
 
 
 # =============================================================================
-# REWARD SHAPING (Exercise 3)
+# REWARD SHAPING (Exercise 4)
 # =============================================================================
 
 def shaped_reward(scores: list[float], completions: list[str]) -> list[float]:

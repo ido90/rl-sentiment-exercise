@@ -126,6 +126,10 @@ def make_reward_function(
     
     scorer = reward_module.sentiment_reward
     
+    # QUESTION Q4: This function receives completions and prompts as arguments from
+    # TRL. Read through the 4 steps below. What is the final reward composed of?
+    # Which steps are controlled by the arguments --reward_shaping and --kl_type?
+
     def reward_fn(completions: list[str], prompts: list[str] = None, **kwargs) -> list[float]:
         # Step 1: Compute base reward from scorer
         raw_scores = scorer(completions)

@@ -93,6 +93,11 @@ def get_sentiment_scores(texts: list[str]) -> list[float]:
         # Softmax to get probabilities for each star rating (1-5)
         probs = torch.softmax(outputs.logits, dim=-1)  # Shape: (batch, 5)
         
+        # QUESTION Q3: The reward is based on a sentiment model, which is a k-class classifier:
+        # for every text input, the sentiment model assigns probability to every class, i.e.,
+        # every star rating. We convert this output of the sentiment model.
+        # Why is the conversion needed and how is it done?
+
         # Compute expected star rating: E[stars] = sum(p_i * i) for i in 1..5
         stars = torch.arange(1, 6, device=device, dtype=torch.float32)
         expected_stars = (probs * stars).sum(dim=-1)  # Shape: (batch,)
@@ -117,6 +122,8 @@ POSITIVE_WORDS = [
 
 def get_hackable_scores(texts: list[str]) -> list[float]:
     """
+    DEPRECATED: Not currently wired into the training pipeline. get_sentiment_scores() is used instead.
+    
     A deliberately "hackable" reward function for demonstrating reward hacking.
     
     Returns the PROPORTION of words that are positive. This incentivizes the model

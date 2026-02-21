@@ -7,6 +7,10 @@ Provides prompts for training a language model to generate positive sentiment te
 from datasets import Dataset
 
 
+# QUESTION Q1: In standard RL, the "environment" provides states and rewards.
+# In our LLM fine-tuning setup, what plays the role of the environment?
+# What are the "states" and "actions"?
+
 # Movie review starter prompts for sentiment generation
 TRAIN_PROMPTS = [
     # Neutral starters
@@ -140,6 +144,8 @@ VALIDATION_PROMPTS = [
     "Looking back, I feel",
 ]
 
+# QUESTION Q2: How do the prompts differ from typical modern LLM prompts?
+# How is this related to the choice to work with GPT-2?
 
 def get_train_dataset() -> Dataset:
     """
