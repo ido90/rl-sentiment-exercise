@@ -153,7 +153,7 @@ Where does prompt engineering fall short? Why is this especially hard with a bas
 
 ---
 
-## Training arguments
+## Training parameters
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
