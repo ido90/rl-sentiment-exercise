@@ -57,9 +57,6 @@ python rewards.py  # Should show NotImplementedError for student functions
 
 ## Exercises
 
-Students implement their code in `rewards.py`, which is used by default when running `train.py`.
-A reference solution is provided in `rewards_solution.py`. To run with the reference solution code, use `--use_solution`.
-
 ### Exercise 1: Review the Pipeline
 
 (Note: to save time, you may start running Exercise 2 before reviewing the questions in Exercise 1.)
