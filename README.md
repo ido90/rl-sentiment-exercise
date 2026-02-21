@@ -132,7 +132,7 @@ However, you can supply your own prefixes and your own score metric using your c
 #### Your task
 
 * Choose one of the metrics you optimized in Exercise 3. Make sure your chosen metric is the one currently implemented in `shaped_reward()`.
-* Suggest a few prompts that may improve this metric, and add them via `PROMPT_STRATEGIES` in `prompt_engineering.py`. Also keep the `no prefix` as a baseline.
+* Suggest a few prompts that may improve this metric, and add them via `PROMPT_STRATEGIES` in `prompt_engineering.py`. Keep `no prefix` as a baseline.
 * Compare the RL agent vs. the prompt-enhanced GPT-2, with your shaped reward as a score metric:
 ```bash
 # Use your shaped_reward() as the scoring metric
