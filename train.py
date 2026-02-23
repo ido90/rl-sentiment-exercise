@@ -75,6 +75,7 @@ class ValidationCallback(transformers.TrainerCallback):
         
     def on_train_begin(self, args, state, control, model=None, **kwargs):
         """Run validation at step 0 before training starts."""
+        self.max_steps = state.max_steps
         if model is not None:
             self._run_validation(model, 0)
     
@@ -189,7 +190,7 @@ class ValidationCallback(transformers.TrainerCallback):
         
         # Print header
         print(f"\n{'='*70}")
-        print(f"VALIDATION (Step {step}) - {len(completions)} prompts")
+        print(f"VALIDATION (Step {step}/{getattr(self, 'max_steps', '?')}) - {len(completions)} prompts")
         print(f"{'='*70}")
         
         # Print first N examples
@@ -306,7 +307,7 @@ def _init_wandb(
         parts.append(f"lr{config['learning_rate']}")
         if kl_type != "none":
             parts.append(f"kl-{kl_type}")
-            if kl_coef != 0.1:
+            if kl_coef != 5.0:
                 parts.append(f"c{kl_coef}")
         run_name = "_".join(parts)
 
@@ -386,9 +387,9 @@ def train(
     preset: str = "default",
     max_steps: Optional[int] = None,
     num_generations: Optional[int] = None,
-    reward_shaping: str = "linear",
+    reward_shaping: str = "expectation",
     kl_type: str = "none",
-    kl_coef: float = 0.1,
+    kl_coef: float = 5.0,
     negate_reward: bool = False,
     beta: float = 0.0,
     use_solution: bool = False,
@@ -409,9 +410,9 @@ def train(
         preset: Training preset ("default")
         max_steps: Override preset's max_steps
         num_generations: Override preset's num_generations (GRPO group size)
-        reward_shaping: "linear" or "shaped" (custom shaping from rewards module)
+        reward_shaping: "five_stars", "expectation", or "custom" (see reward_utils.py)
         kl_type: Custom KL regularization in reward ("none", "forward", "backward")
-        kl_coef: Coefficient for custom KL regularization (default: 0.1)
+        kl_coef: Coefficient for custom KL regularization (default: 5.0)
         negate_reward: Negate reward to optimize for negative sentiment
         beta: TRL's internal KL regularization coefficient (0.0 = disabled)
         use_solution: Use rewards_solution.py instead of rewards.py (for testing)
@@ -522,7 +523,11 @@ def train(
     )
     
     # Print reward configuration
-    shaping_desc = {"linear": "linear", "shaped": "custom (from rewards module)"}
+    shaping_desc = {
+        "five_stars": "binary P(5 stars)",
+        "expectation": "continuous expected stars",
+        "custom": "custom (from rewards module)",
+    }
     kl_desc = {
         "none": "None",
         "forward": f"Forward KL (coef={kl_coef})",
@@ -716,9 +721,9 @@ def main():
     
     # Reward configuration
     parser.add_argument(
-        "--reward_shaping", type=str, default="linear",
-        choices=["linear", "shaped"],
-        help="Reward shaping method"
+        "--reward_shaping", type=str, default="expectation",
+        choices=["five_stars", "expectation", "custom"],
+        help="Reward shaping: five_stars (binary), expectation (continuous), custom (shaped_reward)"
     )
     parser.add_argument(
         "--kl_type", type=str, default="none",

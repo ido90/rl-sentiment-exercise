@@ -52,9 +52,34 @@ def load_sentiment_model(
     return _sentiment_model, _sentiment_tokenizer
 
 
+def get_star_probs(texts: list[str]) -> torch.Tensor:
+    """Run the sentiment model and return per-class probabilities (batch, 5)."""
+    model, tokenizer = load_sentiment_model()
+    device = next(model.parameters()).device
+    
+    inputs = tokenizer(
+        texts,
+        padding=True,
+        truncation=True,
+        max_length=512,
+        return_tensors="pt"
+    )
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+    
+    with torch.no_grad():
+        outputs = model(**inputs)
+        probs = torch.softmax(outputs.logits, dim=-1)  # Shape: (batch, 5)
+    
+    return probs
+
+
 def get_sentiment_scores(texts: list[str]) -> list[float]:
     """
     Get sentiment scores for a list of texts.
+
+    Note: this is a duplicate of rewards.expected_stars(). The difference is that
+    get_sentiment_scores() is used as part of the evaluation pipeline, while
+    expected_stars() is used for the training reward and is implemented by the student.
     
     Uses a 5-star rating model and computes the expected value:
         score = (E[stars] - 1) / 4 = (sum(p(star_i) * star_i) - 1) / 4
@@ -74,36 +99,15 @@ def get_sentiment_scores(texts: list[str]) -> list[float]:
         >>> scores = get_sentiment_scores(["Great movie!", "It was okay.", "Terrible!"])
         >>> # Returns approximately [0.85, 0.50, 0.15]
     """
-    model, tokenizer = load_sentiment_model()
-    device = next(model.parameters()).device
+    probs = get_star_probs(texts)
+    device = probs.device
     
-    # Tokenize all texts
-    inputs = tokenizer(
-        texts,
-        padding=True,
-        truncation=True,
-        max_length=512,
-        return_tensors="pt"
-    )
-    inputs = {k: v.to(device) for k, v in inputs.items()}
+    # Compute expected star rating: E[stars] = sum(p_i * i) for i in 1..5
+    stars = torch.arange(1, 6, device=device, dtype=torch.float32)
+    expected_stars = (probs * stars).sum(dim=-1)  # Shape: (batch,)
     
-    # Get predictions
-    with torch.no_grad():
-        outputs = model(**inputs)
-        # Softmax to get probabilities for each star rating (1-5)
-        probs = torch.softmax(outputs.logits, dim=-1)  # Shape: (batch, 5)
-        
-        # QUESTION Q3: The reward is based on a sentiment model, which is a k-class classifier:
-        # for every text input, the sentiment model assigns probability to every class, i.e.,
-        # every star rating. We convert this output of the sentiment model.
-        # Why is the conversion needed and how is it done?
-
-        # Compute expected star rating: E[stars] = sum(p_i * i) for i in 1..5
-        stars = torch.arange(1, 6, device=device, dtype=torch.float32)
-        expected_stars = (probs * stars).sum(dim=-1)  # Shape: (batch,)
-        
-        # Rescale from [1, 5] to [0, 1]
-        scores = (expected_stars - 1) / 4
+    # Rescale from [1, 5] to [0, 1]
+    scores = (expected_stars - 1) / 4
     
     return scores.cpu().tolist()
 

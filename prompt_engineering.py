@@ -11,7 +11,7 @@ Usage:
     # Compare against an RL-trained model
     python prompt_engineering.py --trained_model ./outputs/final
 
-    # Use your shaped_reward from Exercise 3 as the scoring metric
+    # Use your shaped_reward from Exercise 5 as the scoring metric
     python prompt_engineering.py --use_shaped_reward --trained_model ./outputs/final
 
     # Try your own custom prefixes

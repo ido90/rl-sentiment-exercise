@@ -5,38 +5,75 @@ This module contains reward function implementations for the RL exercise.
 Students should implement the functions marked with TODO.
 
 Functions to implement:
-1. kl_penalty_forward() - Forward KL divergence penalty
-2. kl_penalty_backward() - Backward KL divergence penalty
-3. shaped_reward() - Apply reward shaping to rewards
+1. expected_stars() - Continuous sentiment reward (Exercise 3)
+2. kl_penalty_forward() - Forward KL divergence penalty (Exercise 4)
+3. kl_penalty_backward() - Backward KL divergence penalty (Exercise 4)
+4. shaped_reward() - Apply reward shaping to rewards (Exercise 5)
 
-The base sentiment_reward() is provided as a working example.
+The binary five_stars_reward() is provided as a working example.
 """
 
-from sentiment import get_sentiment_scores
+from sentiment import get_star_probs
 
 
 # =============================================================================
-# BASE REWARD FUNCTION (Provided - working example)
+# BINARY REWARD FUNCTION (Provided - Exercise 2)
 # =============================================================================
 
-def sentiment_reward(completions: list[str]) -> list[float]:
+# QUESTION Q3: The reward is based on a sentiment model, which is a k-class classifier:
+# for every text input, the sentiment model assigns probability to every class, i.e.,
+# every star rating. We convert this output of the sentiment model into a binary reward.
+# Why is the conversion needed?
+# How is the conversion done here?
+# What other ways are there to convert the sentiment probability outputs into a reward?
+
+def five_stars_reward(completions: list[str], threshold: float = 0.5) -> list[float]:
     """
-    Compute sentiment reward for a list of completions.
+    Binary reward: 1 if P(5 stars) >= threshold, else 0.
     
-    This is the base reward function that returns sentiment scores in [0, 1].
-    Higher values indicate more positive sentiment.
+    Args:
+        completions: List of generated text completions
+        threshold: Probability threshold for the 5-star class
+    
+    Returns:
+        List of binary rewards (0.0 or 1.0)
+    """
+    probs = get_star_probs(completions)[:, -1].cpu().tolist()
+    return [1.0 if p >= threshold else 0.0 for p in probs]
+
+
+# =============================================================================
+# EXPECTED STARS REWARD (Exercise 3)
+# =============================================================================
+
+def expected_stars(completions: list[str]) -> list[float]:
+    """
+    Continuous reward based on expected star rating, rescaled to [0, 1].
     
     Args:
         completions: List of generated text completions
     
     Returns:
         List of sentiment scores in [0, 1]
+    
+    TODO: Implement this function:
+    - Use get_star_probs(completions) to get a (batch, 5) tensor of P(completion i is rated with j stars).
+      - See five_stars_reward() above as reference for using get_star_probs().
+    - Compute the expected star rating E[stars], then rescale from [1, 5] to [0, 1].
     """
-    return get_sentiment_scores(completions)
+    # =========================================================================
+    # YOUR CODE HERE (~5 lines)
+    # =========================================================================
+    raise NotImplementedError(
+        "Exercise 3: Implement expected_stars reward"
+    )
+    # =========================================================================
+    # END YOUR CODE
+    # =========================================================================
 
 
 # =============================================================================
-# KL REGULARIZATION (Exercise 3)
+# KL REGULARIZATION (Exercise 4)
 #
 # CONTEXT: TRL already includes built-in KL regularization (the `beta` parameter),
 # applied per-token during advantage computation. Here you re-implement KL
@@ -119,7 +156,7 @@ def kl_penalty_backward(
 
 
 # =============================================================================
-# REWARD SHAPING (Exercise 4)
+# REWARD SHAPING (Exercise 5)
 # =============================================================================
 
 def shaped_reward(scores: list[float], completions: list[str], prompts: list[str] = None) -> list[float]:
@@ -166,14 +203,23 @@ if __name__ == "__main__":
         "It was okay, nothing special.",
     ]
     
-    # Test sentiment reward (provided implementation)
-    print("1. Sentiment Reward (raw scores [0, 1]):")
-    rewards = sentiment_reward(test_texts)
+    # Test five_stars_reward (provided)
+    print("1. Five Stars Reward (binary, threshold=0.5):")
+    rewards = five_stars_reward(test_texts, threshold=0.5)
     for text, reward in zip(test_texts, rewards):
-        print(f"   {reward:.3f}: {text[:40]}...")
+        print(f"   {reward:.1f}: {text[:40]}...")
+    
+    # Test expected_stars (student implementation)
+    print("\n2. Expected Stars (student exercise):")
+    try:
+        rewards = expected_stars(test_texts)
+        for text, reward in zip(test_texts, rewards):
+            print(f"   {reward:.3f}: {text[:40]}...")
+    except NotImplementedError:
+        print(f"   Not implemented yet")
     
     # Test reward shaping (student implementation)
-    print("\n2. Reward Shaping (student exercise):")
+    print("\n3. Reward Shaping (student exercise):")
     test_scores = [0.1, 0.3, 0.5, 0.7, 0.9]
     test_completions = ["bad", "meh", "okay", "good movie", "amazing film!"]
     try:
@@ -185,7 +231,7 @@ if __name__ == "__main__":
     
     # Test KL penalties (student implementation)
     # Values should be ≥ 0 (subtracted from reward by infrastructure)
-    print("\n3. KL Penalties (student exercise):")
+    print("\n4. KL Penalties (student exercise):")
     test_lp_policy = [[-2.0, -3.0, -1.5], [-1.0, -2.0]]  # Per-token log probs
     test_lp_ref = [[-2.5, -2.5, -2.5], [-1.5, -1.5]]
     try:

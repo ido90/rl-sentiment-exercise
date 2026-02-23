@@ -6,19 +6,39 @@ This is the instructor/solution version - students should work with rewards.py.
 """
 
 import math
-from sentiment import get_sentiment_scores
+import torch
+from sentiment import get_star_probs
 
 
 # =============================================================================
-# BASE REWARD FUNCTION
+# BINARY REWARD FUNCTION (Provided - Exercise 2)
 # =============================================================================
 
-def sentiment_reward(completions: list[str]) -> list[float]:
+def five_stars_reward(completions: list[str], threshold: float = 0.5) -> list[float]:
     """
-    Compute sentiment reward for a list of completions.
+    Binary reward: 1 if P(5 stars) >= threshold, else 0.
     
-    This is the base reward function that returns sentiment scores in [0, 1].
-    Higher values indicate more positive sentiment.
+    Args:
+        completions: List of generated text completions
+        threshold: Probability threshold for the 5-star class
+    
+    Returns:
+        List of binary rewards (0.0 or 1.0)
+    """
+    probs = get_star_probs(completions)[:, -1].cpu().tolist()
+    return [1.0 if p >= threshold else 0.0 for p in probs]
+
+
+# =============================================================================
+# EXPECTED STARS REWARD (Exercise 3) - SOLUTION
+# =============================================================================
+
+def expected_stars(completions: list[str]) -> list[float]:
+    """
+    Continuous reward based on expected star rating, rescaled to [0, 1].
+    
+    SOLUTION: Compute E[stars] = sum(P(star_i) * i) for i in 1..5,
+    then rescale from [1, 5] to [0, 1].
     
     Args:
         completions: List of generated text completions
@@ -26,11 +46,15 @@ def sentiment_reward(completions: list[str]) -> list[float]:
     Returns:
         List of sentiment scores in [0, 1]
     """
-    return get_sentiment_scores(completions)
+    probs = get_star_probs(completions)
+    stars = torch.arange(1, 6, device=probs.device, dtype=torch.float32)
+    expected = (probs * stars).sum(dim=-1)
+    scores = (expected - 1) / 4
+    return scores.cpu().tolist()
 
 
 # =============================================================================
-# KL REGULARIZATION - SOLUTION
+# KL REGULARIZATION (Exercise 4) - SOLUTION
 #
 # CONTEXT: TRL includes built-in KL regularization (the `beta` parameter),
 # applied per-token during advantage computation. Here we re-implement KL
@@ -109,7 +133,7 @@ def kl_penalty_backward(
 
 
 # =============================================================================
-# REWARD SHAPING - SOLUTION
+# REWARD SHAPING (Exercise 5) - SOLUTION
 # =============================================================================
 
 def shaped_reward(scores: list[float], completions: list[str], prompts: list[str] = None) -> list[float]:
@@ -142,14 +166,20 @@ if __name__ == "__main__":
         "It was okay, nothing special.",
     ]
     
-    # Test sentiment reward
-    print("1. Sentiment Reward (raw scores [0, 1]):")
-    rewards = sentiment_reward(test_texts)
+    # Test five_stars_reward (binary)
+    print("1. Five Stars Reward (binary, threshold=0.5):")
+    rewards = five_stars_reward(test_texts, threshold=0.5)
+    for text, reward in zip(test_texts, rewards):
+        print(f"   {reward:.1f}: {text[:40]}...")
+    
+    # Test expected_stars (continuous)
+    print("\n2. Expected Stars (continuous [0, 1]):")
+    rewards = expected_stars(test_texts)
     for text, reward in zip(test_texts, rewards):
         print(f"   {reward:.3f}: {text[:40]}...")
     
     # Test reward shaping
-    print("\n2. Shaped Reward (exponential example):")
+    print("\n3. Shaped Reward:")
     test_scores = [0.1, 0.3, 0.5, 0.7, 0.9]
     test_completions = ["bad", "meh", "okay", "good movie", "amazing film!"]
     shaped_results = shaped_reward(test_scores, test_completions)
@@ -157,7 +187,7 @@ if __name__ == "__main__":
         print(f"   {score:.1f} -> {s:+.3f}")
     
     # Test KL penalties (token-level)
-    print("\n3. KL Penalties (token-level):")
+    print("\n4. KL Penalties (token-level):")
     test_lp_policy = [[-2.0, -3.0, -1.5], [-1.0, -2.0]]  # Per-token log probs
     test_lp_ref = [[-2.5, -2.5, -2.5], [-1.5, -1.5]]
     

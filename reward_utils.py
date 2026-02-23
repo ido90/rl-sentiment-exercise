@@ -88,7 +88,7 @@ def compute_log_probs(
 
 
 def make_reward_function(
-    shaping: str = "linear",
+    shaping: str = "expectation",
     kl_type: str = "none",
     kl_coef: float = 0.1,
     policy_model=None,
@@ -101,12 +101,15 @@ def make_reward_function(
     Factory function to create a combined reward function.
     
     This creates a reward function that:
-    1. Computes base reward using sentiment_reward (with optional shaping)
+    1. Computes base reward using sentiment scores (with optional shaping)
     2. Optionally negates the base reward (for negative sentiment optimization)
     3. Subtracts KL regularization penalty (if enabled)
     
     Args:
-        shaping: Type of reward shaping ("linear" or "shaped")
+        shaping: Type of reward shaping:
+            - "five_stars": Binary reward, 1 if P(5 stars)>=0.5, else 0
+            - "expectation": Continuous expected-stars score in [0, 1]
+            - "custom": Student-defined shaped_reward()
         kl_type: Type of KL regularization ("none", "forward", "backward")
         kl_coef: Coefficient for KL term
         policy_model: Current policy model (required if kl_type != "none")
@@ -124,29 +127,27 @@ def make_reward_function(
     if reward_module is None:
         import rewards_solution as reward_module
     
-    scorer = reward_module.sentiment_reward
-    
     # QUESTION Q4: This function receives completions and prompts as arguments from
-    # TRL. Read through the 4 steps below. What is the final reward composed of?
-    # Which steps are controlled by the arguments --reward_shaping and --kl_type?
+    # TRL. Read through the 3 steps below. What is the final reward composed of?
+    # Which steps are affected by the arguments --reward_shaping and --kl_type, and how?
 
     def reward_fn(completions: list[str], prompts: list[str] = None, **kwargs) -> list[float]:
-        # Step 1: Compute base reward from scorer
-        raw_scores = scorer(completions)
-        
-        # Step 2: Apply shaping
-        if shaping == "linear":
-            base_rewards = list(raw_scores)
-        elif shaping == "shaped":
-            base_rewards = reward_module.shaped_reward(raw_scores, completions, prompts)
+        # Step 1: Compute completions' base reward
+        if shaping == "five_stars":
+            base_rewards = reward_module.five_stars_reward(completions)
+        elif shaping == "expectation":
+            base_rewards = reward_module.expected_stars(completions)
+        elif shaping == "custom":
+            expected_stars = reward_module.expected_stars(completions)
+            base_rewards = reward_module.shaped_reward(expected_stars, completions, prompts)
         else:
             raise ValueError(f"Unknown shaping: {shaping}")
         
-        # Step 3: Negate if optimizing for negative sentiment (before KL)
+        # Step 2: Negate if optimizing for negative sentiment (before KL)
         if negate:
             base_rewards = [-r for r in base_rewards]
         
-        # Step 4: Subtract KL regularization penalty if enabled
+        # Step 3: Subtract KL regularization penalty if enabled
         if kl_type != "none" and prompts is not None:
             log_probs_policy = compute_log_probs(completions, prompts, policy_model, tokenizer)
             log_probs_ref = compute_log_probs(completions, prompts, ref_model, tokenizer)

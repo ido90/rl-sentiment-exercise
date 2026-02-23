@@ -9,9 +9,10 @@ The course is organized by NVIDIA Research in collaboration with Google Research
 
 In this exercise, you will:
 1. Train GPT-2 to generate positive sentiment text.
-2. Observe reward hacking and resolve it via KL divergence regularization.
-3. Reshape rewards to obtain different model behaviors.
-4. Compare RL vs. prompt engineering.
+2. Face the challenge of sparse rewards and resolve it via reward design.
+3. Face reward hacking and resolve it via KL divergence regularization.
+4. Reshape rewards to obtain different model behaviors.
+5. Compare RL vs. prompt engineering.
 
 ## Prerequisites
 
@@ -64,7 +65,7 @@ python rewards.py  # Should show NotImplementedError for student functions
 Read through the codebase to understand the full RL fine-tuning pipeline. There are **10 comprehension questions** (Q1–Q10) embedded as comments throughout the code. Search for `QUESTION Q` across these files:
 
 - `data.py` — Q1, Q2 (data and prompts)
-- `sentiment.py` — Q3 (reward model)
+- `rewards.py` — Q3 (reward conversion)
 - `reward_utils.py` — Q4 (reward function wiring)
 - `train.py` — Q5–Q10 (validation, training data, GRPO config, temperature, KL, and trainer)
 
@@ -77,14 +78,27 @@ Read each question in context, and make sure you can answer it before moving on.
 Run the vanilla GRPO fine-tuning using:
 
 ```bash
-python train.py
+python train.py --reward_shaping five_stars
 ```
 
-Observe the results - both the numeric validation scores and model output examples.
-* Do the outputs look like natural language? What might be going wrong?
-* Given the model output examples, would you expect the perplexity score to be high or low? Does the actual peplexity metric match your expectation? How can you explain this?
+* Observe the results. Does the model learn to generate more positive text?
+* `--reward_shaping five_stars` tells the trainer to use the reward function `five_stars_reward()` in `rewards.py`. Considering this reward, how can you explain the result of the training? (Hint: check the train rewards on WandB)
 
-### Exercise 3: KL Regularization
+### Exercise 3: Non-sparse Reward
+
+Implement `expected_stars()` in `rewards.py`, and train with this new reward function:
+
+```bash
+python train.py
+```
+> Note: `--reward_shaping expectation` is already the default, so no need to state it explicitly.
+
+Observe the results - both the numeric validation scores and model output examples.
+* Did the model learn to be positive? How does the learning compare to the binary reward from Exercise 2?
+* Do the outputs look like natural language? What might be going wrong?
+* Given the model output examples, would you expect the perplexity score to be high or low? Does the actual perplexity metric match your expectation? How can you explain this?
+
+### Exercise 4: KL Regularization
 
 * In `rewards.py`, implement `kl_penalty_forward()` and `kl_penalty_backward()` to prevent the model from drifting too far from the original GPT-2.
 * Run and compare the forward and backward regularizations.
@@ -99,7 +113,7 @@ python train.py --kl_type forward --kl_coef XXX
 
 > **Technical note**: TRL has built-in KL regularization, but in this exercise you implement it yourself. You receive pre-computed per-token log probabilities for both the current policy and the reference model. These are re-calculated outside TRL so that you can access them without modifying TRL's interface.
 
-### Exercise 4: Reward Shaping
+### Exercise 5: Reward Shaping
 
 Now that KL regularization keeps the model grounded, this is your chance to get creative.
 Shape the reward however you like — force your will on the language model
@@ -108,7 +122,7 @@ and watch how different incentives translate within minutes into entirely differ
 Implement `shaped_reward()` in `rewards.py`  to modify the raw sentiment scores, and train via:
 
 ```bash
-python train.py --reward_shaping shaped
+python train.py --reward_shaping custom
 ```
 
 Among the reward metrics you tried, which ones learned well and which ones were harder to optimize?
@@ -122,7 +136,7 @@ We encourage you to come up with your own reward function. Below are a few ideas
 - Mood whiplash: Start negative, end positive (or vice versa)
 - Vocabulary spice: Reward uncommon words or penalize boring ones
 
-### Exercise 5: RL vs. Prompt Engineering
+### Exercise 6: RL vs. Prompt Engineering
 
 So far, you demonstrated that properly-used RL is a powerful tool for tuning an LLM to your needs.
 But could one obtain a similar effect using *Prompt Engineering*, to guide the LLM toward the desired behavior?
@@ -144,11 +158,11 @@ python prompt_engineering.py
 python prompt_engineering.py --trained_model ./outputs/final
 ```
 
-However, in the exercise you will supply your own prefixes and your own score metric, using your custom reward function from Exercise 3.
+However, in the exercise you will supply your own prefixes and your own score metric, using your custom reward function from Exercise 5.
 
 #### Your task
 
-* Choose one of the metrics you optimized in Exercise 3. Make sure your chosen metric is the one currently implemented in `shaped_reward()`.
+* Choose one of the metrics you optimized in Exercise 5. Make sure your chosen metric is the one currently implemented in `shaped_reward()`.
 * Suggest a few prompts that may improve this metric, and add them via `PROMPT_STRATEGIES` in `prompt_engineering.py`. Keep `no prefix` as a baseline.
 * Compare the RL agent vs. the prompt-enhanced GPT-2, with your shaped reward as a score metric:
 ```bash
@@ -165,7 +179,7 @@ Where does prompt engineering fall short? Why is this especially hard with a bas
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `--reward_shaping` | linear, shaped | linear |
+| `--reward_shaping` | five_stars, expectation, custom | expectation |
 | `--kl_type` | none, forward, backward | none |
 | `--kl_coef` | Custom KL strength | 5.0 |
 
