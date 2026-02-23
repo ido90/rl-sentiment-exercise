@@ -61,12 +61,12 @@ python rewards.py  # Should show NotImplementedError for student functions
 
 (Note: to save time, you may start running Exercise 2 before reviewing the questions in Exercise 1.)
 
-Read through the codebase to understand the full RL fine-tuning pipeline. There are **9 comprehension questions** (Q1–Q9) embedded as comments throughout the code. Search for `QUESTION Q` across these files:
+Read through the codebase to understand the full RL fine-tuning pipeline. There are **10 comprehension questions** (Q1–Q10) embedded as comments throughout the code. Search for `QUESTION Q` across these files:
 
 - `data.py` — Q1, Q2 (data and prompts)
 - `sentiment.py` — Q3 (reward model)
 - `reward_utils.py` — Q4 (reward function wiring)
-- `train.py` — Q5–Q9 (validation, training data, GRPO config, and trainer)
+- `train.py` — Q5–Q10 (validation, training data, GRPO config, temperature, KL, and trainer)
 
 Read each question in context, and make sure you can answer it before moving on.
 

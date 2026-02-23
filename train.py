@@ -552,8 +552,12 @@ def train(
         # GRPO specific
         num_generations=actual_num_generations,
         max_completion_length=config_preset.max_completion_length,
+        # QUESTION Q8: This if the model temperature on training.
+        # Find the temperature set for validation, and verify that it is currently the same.
+        # Should we use different temperatures for training and validation? Which one would
+        # be higher? What are the pros and cons of that approach?
         temperature=config_preset.temperature,
-        # QUESTION Q8 (optional): The beta parameter below is TRL's built-in KL regularization
+        # QUESTION Q9 (optional): The beta parameter below is TRL's built-in KL regularization
         # (which you will not be using in this exercise).
         # The kl_type/kl_coef parameters control a separate, custom KL regularization
         # that you will implement in rewards.py. You already observed this in reward_utils.py (Q4).
@@ -624,7 +628,7 @@ def train(
     # Use policy_model if loaded (for custom KL), otherwise let TRL load from model_name
     model_for_trainer = policy_model if policy_model is not None else model_name
     
-    # QUESTION Q9: Look at the arguments passed to GRPOTrainer below, and make sure
+    # QUESTION Q10: Look at the arguments passed to GRPOTrainer below, and make sure
     # you understand why each one is needed.
 
     trainer = trl.GRPOTrainer(
