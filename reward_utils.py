@@ -107,7 +107,7 @@ def make_reward_function(
     
     Args:
         shaping: Type of reward shaping:
-            - "five_stars": Binary reward, 1 if P(5 stars)>=0.5, else 0
+            - "five_stars": Binary reward, 1 if P(5 stars)>=0.8, else 0
             - "expectation": Continuous expected-stars score in [0, 1]
             - "custom": Student-defined shaped_reward()
         kl_type: Type of KL regularization ("none", "forward", "backward")

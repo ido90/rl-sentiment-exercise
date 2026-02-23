@@ -488,7 +488,7 @@ def train(
     # QUESTION Q6: The training dataset loaded below contains only prompts,
     # with no target outputs or labels. Where does the learning signal come from
     # instead? Trace it: what provides the "labels" and where is it passed to the
-    # trainer? (Hint: look for reward_func.)
+    # trainer? (Hint: look for reward_func)
 
     # Load dataset
     print("Loading dataset...")

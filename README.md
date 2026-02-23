@@ -103,12 +103,12 @@ Observe the results - both the numeric validation scores and model output exampl
 * In `rewards.py`, implement `kl_penalty_forward()` and `kl_penalty_backward()` to prevent the model from drifting too far from the original GPT-2.
 * Run and compare the forward and backward regularizations.
 * Is the learned model highly positive? Does it provide sensible writing?
-* Tune the regularization coefficient to achieve a model that is both sensible and positive. Try to keep the mean sentiment score above 0.9.
+* Tune the regularization coefficient to achieve a model that is both sensible and positive. Try to get the mean sentiment score above 0.8.
 
-To train with your KL regularization, use `kl_type` and `kl_coef`. For example:
+To train with your KL regularization, use `kl_type` (with `forward` or `backward`) and `kl_coef` (with a numeric coefficient). For example:
 
 ```bash
-python train.py --kl_type forward --kl_coef XXX
+python train.py --kl_type forward
 ```
 
 > **Technical note**: TRL has built-in KL regularization, but in this exercise you implement it yourself. You receive pre-computed per-token log probabilities for both the current policy and the reference model. These are re-calculated outside TRL so that you can access them without modifying TRL's interface.
@@ -116,7 +116,7 @@ python train.py --kl_type forward --kl_coef XXX
 ### Exercise 5: Reward Shaping
 
 Now that KL regularization keeps the model grounded, this is your chance to get creative.
-Shape the reward however you like — force your will on the language model
+Shape the reward however you like - force your will on the language model
 and watch how different incentives translate within minutes into entirely different outputs.
 
 Implement `shaped_reward()` in `rewards.py`  to modify the raw sentiment scores, and train via:
@@ -143,7 +143,7 @@ But could one obtain a similar effect using *Prompt Engineering*, to guide the L
 
 In this exercise, you will (a) compare RL vs. Prompt Engineering, (b) demonstrate that they can also work together.
 
-#### Code
+#### Code infrastructure
 
 `prompt_engineering.py` lets you test the Base GPT-2 against your RL-trained model, with various modified prompts.
 The code allows you to try different prompt-prefixes, which are just strings that are concatenated before the beginning of every test prompt.
@@ -229,14 +229,18 @@ Prompt: I would describe this film as
 Generated: something out of pop theater's past: it could make many a girl shudder. I was in college when people took photographs of...
 ```
 
-### Vanilla RL tuning
+### RL tuning with sparse reward (Ex. 2)
+
+Same as above (no learning).
+
+### RL tuning with non-sparse reward (Ex. 3)
 
 ```
 Prompt: I would describe this film as
 Generated: incredible! amazing! amazing, all. truly! amazing. absolutely and really absolutely. really.! absolutely. truly!. truly! absolutely and so. truly. truly! my. perfectly. perfect. perfect. incredible...
 ```
 
-### Regularized RL tuning
+### Regularized RL tuning (Ex. 4)
 
 ```
 Prompt: I would describe this film as
