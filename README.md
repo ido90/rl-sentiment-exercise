@@ -88,7 +88,7 @@ Do the outputs look like natural language? What might be going wrong?
 
 * In `rewards.py`, implement `kl_penalty_forward()` and `kl_penalty_backward()` to prevent the model from drifting too far from the original GPT-2.
 * Run and compare the forward and backward regularizations.
-* Is the learned model highly positive? Does it provide sensible writing? Try to tune the regularization coefficient to achieve a model with both positive sentiment and sensible writing.
+* Is the learned model highly positive? Does it provide sensible writing? Tune the regularization coefficient to achieve a model with both sensible writing and positive sentiment (try to keep the mean sentiment score above 0.9).
 
 To train with your KL regularization, use `kl_type` and `kl_coef`. For example:
 
