@@ -172,7 +172,7 @@ python prompt_engineering.py --use_shaped_reward --trained_model ./outputs/final
 ```
 
 Summarize your findings.
-Where does prompt engineering fall short? Why is this especially hard with a base (non-instruction-tuned) model like GPT-2? Did prompting and RL together do better than each of the two on their own?
+Where does prompt engineering fall short? Why is prompt engineering especially hard with a base (non-instruction-tuned) model like GPT-2? Did prompting and RL together do better than each of the two on their own?
 
 ---
 
