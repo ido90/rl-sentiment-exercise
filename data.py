@@ -8,8 +8,7 @@ from datasets import Dataset
 
 
 # QUESTION Q1: In standard RL, the "environment" provides states and rewards.
-# In our LLM fine-tuning setup, what plays the role of the environment?
-# What are the "states" and "actions"?
+# In our LLM fine-tuning setup, what is the environment - i.e. what are the "states" and "actions"?
 
 # Movie review starter prompts for sentiment generation
 TRAIN_PROMPTS = [
