@@ -27,7 +27,7 @@ from sentiment import get_star_probs
 # How is the conversion done here?
 # What other ways are there to convert the sentiment probability outputs into a reward?
 
-def five_stars_reward(completions: list[str], threshold: float = 0.8) -> list[float]:
+def five_stars_reward(completions: list[str], threshold: float = 0.9) -> list[float]:
     """
     Binary reward: 1 if P(5 stars) >= threshold, else 0.
     
