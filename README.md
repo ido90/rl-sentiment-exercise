@@ -95,7 +95,7 @@ python train.py
 > Note: `--reward_shaping expectation` is already the default, so no need to state it explicitly.
 
 Observe the results - both the numeric validation scores and model output examples.
-* Did the model learn to be positive? How does the learning compare to the binary reward from Exercise 2?
+* Did the model learn to be positive? Compare the learning curves to the binary reward from Exercise 2.
 * Do the outputs look like natural language? What might be going wrong?
 * Given the model output examples, would you expect the perplexity score to be high or low? Does the actual perplexity metric match your expectation? How can you explain this?
 
